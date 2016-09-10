@@ -12,6 +12,7 @@ class Bibliography:
         with open(filename) as f:
             self.bib = f.readlines()
             self.bib = [l for l in self.bib if l != '\n']
+            self.bib = [l for l in self.bib if l.strip()[0] != '%']
 
         # Declare ordering of the months and an alphabet for citekey suffixes.
 
