@@ -45,19 +45,17 @@ class Bibliography:
         then from those into the new citekeys to prevent getting confused with
         old and new citekeys which may be the same.
         """
-
         with open(filename) as f:
             document = f.readlines()
-
         newck = np.array([bi.citekey for bi in self.bibitems])
         oldck = np.array([bi.oldcitekey for bi in self.bibitems])
-
         for i, ck in enumerate(oldck):
             document = [l.replace(ck, 'citekey%d' % i) for l in document]
-        print document
         for i, ck in enumerate(newck):
             document = [l.replace('citekey%d' % i, ck) for l in document]
-        print document
+
+        # If update is True, overwrite the input file, otherwise write to a
+        # second file with _updated in the name.
 
         if not update:
             for i in range(1, len(filename)):
