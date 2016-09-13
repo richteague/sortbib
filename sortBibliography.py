@@ -1,6 +1,5 @@
-import os
 import sys
-from bibclasses import BibItem, Bibliography
+from bibclasses import Bibliography
 
 """ Convert a bibliography, sys.argv[1], into an ordered one. """
 

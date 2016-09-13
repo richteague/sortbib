@@ -1,6 +1,7 @@
 import string
 import numpy as np
 
+
 class Bibliography:
 
     def __init__(self, filename='bibliography.bib'):
@@ -8,7 +9,7 @@ class Bibliography:
         # Upon intialisation, read in the file as a text file and parse into
         # a lsit of BibItems. Remove all the lines which are empty.
 
-        self.filename = filename
+        self.bibfile = filename
         with open(filename) as f:
             self.bib = f.readlines()
             self.bib = [l for l in self.bib if l != '\n']
@@ -20,13 +21,14 @@ class Bibliography:
         self.monthnames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
                            'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
         for m, month in enumerate(self.monthnames):
-            self.months[month]= m
+            self.months[month] = m
         self.alphabet = list(string.ascii_lowercase)
 
-        # Parse into individual bibliography items. Each item becomes a BibItem.
-        # Each BibItem gets assigned a citekey, check that there are no
-        # duplicates. If so append the citekey with a, b, c etc. If the citekey
-        # cannot be generated automatically, the user is asked to enter one.
+        # Parse into individual bibliography items. Each item becomes a
+        # BibItem. Each BibItem gets assigned a citekey, check that there are
+        # no duplicates. If so append the citekey with a, b, c etc. If the
+        # citekey cannot be generated automatically, the user is asked to
+        # enter one.
 
         self.parseBibItems()
         self.verifyMonthKeys()
@@ -38,8 +40,41 @@ class Bibliography:
 
         return
 
-    # Parse the different bib items.
+    def replaceCitations(self, filename, update=False):
+        """Update the citekeys in filename. First replace into dummy variables,
+        then from those into the new citekeys to prevent getting confused with
+        old and new citekeys which may be the same.
+        """
+
+        with open(filename) as f:
+            document = f.readlines()
+
+        newck = np.array([bi.citekey for bi in self.bibitems])
+        oldck = np.array([bi.oldcitekey for bi in self.bibitems])
+
+        for i, ck in enumerate(oldck):
+            document = [l.replace(ck, 'citekey%d' % i) for l in document]
+        print document
+        for i, ck in enumerate(newck):
+            document = [l.replace('citekey%d' % i, ck) for l in document]
+        print document
+
+        if not update:
+            for i in range(1, len(filename)):
+                if filename[-i] == '.':
+                    fileout = filename[:-i]
+                    break
+            fileout += '_updated.' + filename.split('.')[-1]
+        else:
+            fileout = filename
+        with open(fileout, 'w') as fo:
+            for line in document:
+                fo.write(line)
+        print 'Written to %s' % fileout
+        return
+
     def parseBibItems(self):
+        """Parse the different BibItems."""
         self.bibitems = []
         lb = 0
         rb = 0
@@ -53,7 +88,7 @@ class Bibliography:
                 rb = 0
                 article = l + 1
         print 'Found %d bibliography items in %s.' % (len(self.bibitems),
-                                                      self.filename)
+                                                      self.bibfile)
         return
 
     def verifyCiteKeys(self):
@@ -73,7 +108,7 @@ class Bibliography:
             # Check that each component contains the allowed characeters.
             if not np.array([n in self.alphabet or n == '-'
                              for n in name1.lower()]).all():
-                error +=1
+                error += 1
 
             if len(split) == 3:
                 if not np.array([n in self.alphabet or n == '-'
@@ -117,11 +152,11 @@ class Bibliography:
                 # Once ordered, append the appropriate suffix.
 
                 bibitems = [bi for bi in self.bibitems if bi.citekey == ck]
-                suffix = np.array([self.months[bi.keys['month']]
-                                   for bi in self.bibitems if bi.citekey == ck])
-                suffix = suffix.argsort()
+                sfx = np.array([self.months[bi.keys['month']]
+                                for bi in self.bibitems if bi.citekey == ck])
+                sfx = sfx.argsort()
                 for b, bi in enumerate(bibitems):
-                    bi.citekey += self.alphabet[suffix[b]]
+                    bi.citekey += self.alphabet[sfx[b]]
         self.citekeys = [bibitem.citekey for bibitem in self.bibitems]
         return
 
@@ -142,11 +177,18 @@ class Bibliography:
             bibitem.text[0] += '{' + bibitem.citekey + ',\n'
         return
 
-    def writeBibliography(self, fileout=None):
+    def writeBibliography(self, update=False):
         """Write in a new bibliography file with alphabetically ordered
-        citekeys. TODO: Better way of sorting alphabetically."""
-        if fileout is None:
-            fileout = self.filename.split('.')[0] + '_updated.bib'
+        citekeys.
+        """
+        if not update:
+            for i in range(1, len(self.bibfile)):
+                if self.bibfile[-i] == '.':
+                    fileout = self.bibfile[:-i]
+                    break
+            fileout += '_updated.bib'
+        else:
+            fileout = self.bibfile
         writeorder = sorted(self.citekeys)
         with open(fileout, 'w') as fo:
             for ck in writeorder:
@@ -163,12 +205,19 @@ class BibItem:
 
     def __init__(self, text):
         """A bibliography item. From the text will parse all the keywords and
-        their aguments. From the author list a more readable citekey will be
-        generated of the form: author_ea_year.
+        their aguments, include the old citekey. From the author list a more
+        readable citekey will be generated of the form: author_ea_year.
         """
         self.text = text
+        self.parseOldCiteKey()
         self.getKeyWords()
         self.writeCiteKey()
+        return
+
+    def parseOldCiteKey(self):
+        """Parse the old citekey to help replacement."""
+        self.oldcitekey = self.text[0].split(u'{')[-1]
+        self.oldcitekey = self.oldcitekey.split(',')[0]
         return
 
     def getKeyWords(self):
