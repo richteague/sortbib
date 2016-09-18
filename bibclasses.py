@@ -201,30 +201,43 @@ class Bibliography:
 
 class BibItem:
 
+    """A bibliography item. From the text will parse all the bibitem type, keywords and their aguments and citekey.
+    From the author list a more readable citekey will be generated of the form: author_ea_year.
+
+    BibItem.bitype : string, BibItem type, e.g. 'article'.
+    BibItem.keywords : dictionary, returns the keyword values for a given keyword e.g. 'year'.
+    BibItem.oldcitekey : string, original citekey used as the BibItem identifier.
+    BibItem.citekey : string, citekey following the more readable author_ea_year format. May not be unique.
+
+    """
+
     def __init__(self, text):
-        """A bibliography item. From the text will parse all the keywords and
-        their aguments, include the old citekey. From the author list a more
-        readable citekey will be generated of the form: author_ea_year.
-        """
         self.text = text
-        self.parseOldCiteKey()
-        self.getKeyWords()
-        self.writeCiteKey()
+        self.bitype = self.parseType()
+        print self.bitype
+        self.oldcitekey = self.parseOldCiteKey()
+        self.keywords = self.getKeywords()
+        self.citekey = self.writeCiteKey()
         return
+
+    def parseType(self):
+        """Parse the bibitem type."""
+        bitype = self.text[0].split(u'{')[0][1:]
+        return bitype.lower()
 
     def parseOldCiteKey(self):
         """Parse the old citekey to help replacement."""
-        self.oldcitekey = self.text[0].split(u'{')[-1]
-        self.oldcitekey = self.oldcitekey.split(',')[0]
-        return
+        citekey = self.text[0].split(u'{')[-1]
+        citekey = citekey.split(',')[0]
+        return citekey
 
-    def getKeyWords(self):
+    def getKeywords(self):
         """Create a dictionary with all the keywords and their values."""
-        self.keywords = self.parseKeyWords()
-        self.keys = {}
-        for key in self.keywords:
-            self.keys[key] = self.parseKeyValue(key)
-        return
+        keys = self.parseKeyWords()
+        keywords = {}
+        for key in keys:
+            keywords[key] = self.parseKeyValue(key)
+        return keywords
 
     def parseKeyValue(self, keyword):
         """Parse the information for the given keyword."""
@@ -298,25 +311,19 @@ class BibItem:
         return s.strip()
 
     def writeCiteKey(self):
-        """Replace the citekey with a standard format:
-            single author: author_year,
-            two authors: author1_author_2_year,
-            multiple authors: author1_ea_year.
+        """Replace the citekey with a standard, more readable format:
+        single author: author_year,
+        two authors: author1_author_2_year,
+        multiple authors: author1_ea_year.
         """
-        if len(self.keys['author']) == 1:
-            self.citekey = '%s_%s' % (self.keys['author'][0],
-                                      self.keys['year'])
-        elif len(self.keys['author']) == 2:
-            self.citekey = '%s_%s_%s' % (self.keys['author'][0],
-                                         self.keys['author'][1],
-                                         self.keys['year'])
+        if len(self.keywords['author']) == 1:
+            citekey = '%s_%s' % (self.keywords['author'][0],
+                                 self.keywords['year'])
+        elif len(self.keywords['author']) == 2:
+            citekey = '%s_%s_%s' % (self.keywords['author'][0],
+                                    self.keywords['author'][1],
+                                    self.keywords['year'])
         else:
-            self.citekey = '%s_ea_%s' % (self.keys['author'][0],
-                                         self.keys['year'])
-        return self.citekey
-
-    def printKeyWords(self):
-        """Print the available keywords for the bibitem."""
-        for key in self.keys:
-            print key
-        return
+            citekey = '%s_ea_%s' % (self.keywords['author'][0],
+                                    self.keywords['year'])
+        return citekey
